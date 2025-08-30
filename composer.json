@@ -1,0 +1,14 @@
+{
+  "name": "prevail90/moodle_local_digisign",
+  "description": "Moodle local plugin for Docuseal integration",
+  "type": "library",
+  "require": {
+    "php": ">=7.4",
+    "docusealco/docuseal-php": "^1.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "local_digisign\\": "classes/"
+    }
+  }
+}
