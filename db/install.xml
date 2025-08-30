@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<XMLDB PATH="local/digisign/db" VERSION="2025083000" COMMENT="Install file">
+  <TABLES>
+    <TABLE NAME="local_digisign_sub" COMMENT="Docuseal submission records">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" />
+        <FIELD NAME="templateid" TYPE="int" LENGTH="10" NOTNULL="false" />
+        <FIELD NAME="templateslug" TYPE="char" LENGTH="255" NOTNULL="false" />
+        <FIELD NAME="submissionid" TYPE="char" LENGTH="255" NOTNULL="false" />
+        <FIELD NAME="submitterslug" TYPE="char" LENGTH="255" NOTNULL="false" />
+        <FIELD NAME="status" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="created" />
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" />
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" />
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+    </TABLE>
+  </TABLES>
+</XMLDB>
