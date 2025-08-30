@@ -21,26 +21,81 @@ function local_digisign_get_config() {
 /**
  * Fetch templates from Docuseal.
  *
- * Returns decoded JSON array or empty array on failure.
+ * Returns an array of template records (the "data" array from Docuseal response), or [] on failure.
+ *
+ * @param int $limit optional limit to pass to API
+ * @return array
  */
-function local_digisign_fetch_templates() {
+function local_digisign_fetch_templates($limit = 100) {
     $cfg = local_digisign_get_config();
-    $url = rtrim($cfg->api_url, '/') . '/v1/templates';
+
+    // 1) Prefer SDK if available.
+    if (class_exists('\\Docuseal\\Api')) {
+        try {
+            // The Docuseal SDK constructor signature in your example: new \Docuseal\Api('API_KEY', 'https://api.docuseal.com');
+            $client = new \Docuseal\Api($cfg->api_key, rtrim($cfg->api_url, '/'));
+            // listTemplates usually returns an array with 'data' key per your example
+            $resp = $client->listTemplates(['limit' => (int)$limit]);
+            if (is_array($resp) && array_key_exists('data', $resp) && is_array($resp['data'])) {
+                return $resp['data'];
+            }
+            // If SDK returns templates directly (rare), return them.
+            if (is_array($resp)) {
+                return $resp;
+            }
+        } catch (Exception $e) {
+            debugging('local_digisign: Docuseal SDK error: ' . $e->getMessage(), DEBUG_DEVELOPER);
+            // fall through to HTTP fallback
+        }
+    }
+
+    // 2) Fallback: plain HTTP GET
+    $base = rtrim($cfg->api_url, '/');
+    // Your instance uses /templates (not necessarily /v1). Use /templates endpoint as per your note.
+    $url = $base . '/templates';
+    if (!empty($limit)) {
+        $url .= '?limit=' . (int)$limit;
+    }
 
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    // Docuseal expects AuthToken header according to docs/previous code
+    $headers = [
         'AuthToken: ' . $cfg->api_key,
         'Accept: application/json'
-    ]);
+    ];
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+    // timeout safe defaults
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+
     $resp = curl_exec($ch);
     $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlerr = curl_error($ch);
     curl_close($ch);
 
-    if ($code >= 200 && $code < 300 && $resp) {
-        $data = json_decode($resp, true);
-        return is_array($data) ? $data : [];
+    if ($resp === false) {
+        debugging('local_digisign: curl error while fetching templates: ' . $curlerr, DEBUG_DEVELOPER);
+        return [];
     }
+
+    $decoded = json_decode($resp, true);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        debugging('local_digisign: json decode error: ' . json_last_error_msg() . ' resp: ' . substr($resp, 0, 1000), DEBUG_DEVELOPER);
+        return [];
+    }
+
+    // Response shape per your example: { "data": [ ... ], "pagination": { ... } }
+    if (is_array($decoded) && array_key_exists('data', $decoded) && is_array($decoded['data'])) {
+        return $decoded['data'];
+    }
+
+    // If the API returns an array directly, return it.
+    if (is_array($decoded)) {
+        return $decoded;
+    }
+
+    debugging('local_digisign: unexpected templates response code=' . intval($code), DEBUG_DEVELOPER);
     return [];
 }
 
@@ -48,6 +103,7 @@ function local_digisign_fetch_templates() {
  * Create a submission for a template for a user.
  *
  * Returns decoded API response (array) or null.
+ * Note: leave as-is for now; you may adapt to use SDK similarly to fetch templates.
  */
 function local_digisign_create_submission($templateid, $useremail) {
     global $USER;
@@ -77,6 +133,7 @@ function local_digisign_create_submission($templateid, $useremail) {
     if ($code >= 200 && $code < 300 && $resp) {
         return json_decode($resp, true);
     }
+    debugging('local_digisign: create_submission failed code=' . intval($code) . ' resp=' . substr($resp, 0, 500), DEBUG_DEVELOPER);
     return null;
 }
 
@@ -101,6 +158,7 @@ function local_digisign_download_signed_pdf($submissionid) {
     if ($code >= 200 && $code < 300 && $resp) {
         return $resp;
     }
+    debugging('local_digisign: download_signed_pdf failed code=' . intval($code), DEBUG_DEVELOPER);
     return null;
 }
 
