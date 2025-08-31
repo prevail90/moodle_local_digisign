@@ -10,34 +10,39 @@ $PAGE->set_url(new moodle_url('/local/digisign/index.php'));
 $PAGE->set_title(get_string('pluginname', 'local_digisign'));
 $PAGE->set_heading(get_string('pluginname', 'local_digisign'));
 
-// Use AMD init (calls the module's init function). The AMD module should expose an init() function.
+// Initialize AMD module (calls the module's init())
 $PAGE->requires->js_call_amd('local_digisign/digisign', 'init');
 
 $limit = 100;
 $templates = local_digisign_fetch_templates($limit);
 
+// Get fetch debug info recorded by lib.php
+$fetchdebug = local_digisign_get_last_fetch_debug();
+
 echo $OUTPUT->header();
 echo $OUTPUT->heading(get_string('choose_template', 'local_digisign'));
 
-// Root container for JS and markup
-echo '<div id="local-digisign-root" data-useremail="'.s($USER->email).'">';
+// Debug output: show the raw templates JSON and fetch debug trace
+echo html_writer::tag('h3', 'Debug: raw templates array');
+echo html_writer::tag('pre', s(print_r($templates, true)));
+
+echo html_writer::tag('h3', 'Debug: fetch attempts trace (local_digisign_get_last_fetch_debug)');
+echo html_writer::tag('pre', s(print_r($fetchdebug, true)));
 
 if (empty($templates)) {
-    // Friendly message when no templates available
     echo html_writer::div(get_string('notemplatesfound', 'local_digisign'), 'local-digisign-no-templates');
-    echo '</div>'; // root
     echo $OUTPUT->footer();
-    return;
+    exit;
 }
 
+// If not empty, render simple list (same as normal flow)
 echo '<div class="local-digisign-tiles">';
 
 foreach ($templates as $t) {
-    // Docuseal returns templates under a "data" array; local_digisign_fetch_templates() already returns items in that array.
     $tid = isset($t['id']) ? s($t['id']) : '';
     $title = isset($t['name']) ? s($t['name']) : (isset($t['title']) ? s($t['title']) : get_string('untitled', 'local_digisign'));
     $slug = isset($t['slug']) ? s($t['slug']) : '';
-    // preview image if present (take first document)
+
     $preview = '';
     if (!empty($t['documents']) && is_array($t['documents'])) {
         $doc0 = $t['documents'][0];
@@ -45,6 +50,8 @@ foreach ($templates as $t) {
             $preview = s($doc0['preview_image_url']);
         } else if (!empty($doc0['preview_image'])) {
             $preview = s($doc0['preview_image']);
+        } else if (!empty($doc0['url'])) {
+            $preview = s($doc0['url']);
         }
     }
 
@@ -85,7 +92,4 @@ echo '</div>';
 echo '<div id="local-digisign-widget" style="height:calc(100% - 48px);"></div>';
 echo '</div>';
 
-echo '</div>'; // root
-
-// Footer
 echo $OUTPUT->footer();
