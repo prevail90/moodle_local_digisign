@@ -1,0 +1,45 @@
+{
+    "packages": [
+        {
+            "name": "docusealco/docuseal-php",
+            "version": "1.0.4",
+            "version_normalized": "1.0.4.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/docusealco/docuseal-php.git",
+                "reference": "3d2acade13b585a24a9bd3617807d9a008b50911"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/docusealco/docuseal-php/zipball/3d2acade13b585a24a9bd3617807d9a008b50911",
+                "reference": "3d2acade13b585a24a9bd3617807d9a008b50911",
+                "shasum": ""
+            },
+            "time": "2025-06-03T12:34:41+00:00",
+            "type": "library",
+            "installation-source": "dist",
+            "autoload": {
+                "psr-4": {
+                    "Docuseal\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "DocuSeal"
+                }
+            ],
+            "description": "PHP bindings for DocuSeal API",
+            "support": {
+                "issues": "https://github.com/docusealco/docuseal-php/issues",
+                "source": "https://github.com/docusealco/docuseal-php/tree/1.0.4"
+            },
+            "install-path": "../docusealco/docuseal-php"
+        }
+    ],
+    "dev": true,
+    "dev-package-names": []
+}

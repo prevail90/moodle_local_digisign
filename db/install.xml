@@ -15,6 +15,10 @@
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="userid" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
+        <KEY NAME="submissionid" TYPE="index" FIELDS="submissionid"/>
+        <KEY NAME="status" TYPE="index" FIELDS="status"/>
+        <KEY NAME="timecreated" TYPE="index" FIELDS="timecreated"/>
       </KEYS>
     </TABLE>
   </TABLES>

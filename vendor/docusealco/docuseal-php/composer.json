@@ -1,0 +1,17 @@
+{
+    "name": "docusealco/docuseal-php",
+    "description": "PHP bindings for DocuSeal API",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Docuseal\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "DocuSeal"
+        }
+    ],
+    "require": {}
+}

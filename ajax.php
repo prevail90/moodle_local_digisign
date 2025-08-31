@@ -4,6 +4,8 @@
 //  - create_submission (POST): creates a Docuseal submission for the current user and records it locally.
 //  - complete_submission (POST): downloads signed PDF for a submission, optionally stores it in user's private files,
 //                               and marks the submission completed.
+//  - fetch_submissions (GET): fetches submissions from Docuseal API with optional filters.
+//  - get_submission (GET): gets details for a specific submission.
 //
 // Responses are JSON:
 //  { success: true, submission_id: ..., submitter_slug: '...', message: '...' }
@@ -33,9 +35,13 @@ if ($action === 'create_submission' || $action === 'complete_submission') {
 if ($action === 'create_submission') {
     $templateid = required_param('templateid', PARAM_INT);
     $useremail = $USER->email;
+    $username = fullname($USER); // Get user's full name
+
+    // Log the submission creation attempt
+    local_digisign_log('create_submission - user: ' . $username . ' (' . $useremail . '), template: ' . $templateid);
 
     // Try to create submission via helper. This will prefer SDK if vendor/autoload.php is present.
-    $resp = local_digisign_create_submission($templateid, $useremail);
+    $resp = local_digisign_create_submission($templateid, $useremail, $username);
 
     if (!$resp || !is_array($resp)) {
         respond_json(['success' => false, 'error' => get_string('failed_create_submission', 'local_digisign')]);
@@ -102,6 +108,9 @@ if ($action === 'create_submission') {
         $recordid = false;
     }
 
+    // Log successful submission creation
+    local_digisign_log('create_submission success - submission_id: ' . $submissionid . ', submitter_slug: ' . $submitterslug);
+
     respond_json([
         'success' => true,
         'submission_id' => $submissionid,
@@ -113,6 +122,9 @@ if ($action === 'create_submission') {
 if ($action === 'complete_submission') {
     $submissionid = required_param('submission_id', PARAM_RAW); // can be string slug or numeric id
 
+    // Log the submission completion attempt
+    local_digisign_log('complete_submission - user: ' . fullname($USER) . ' (' . $USER->email . '), submission: ' . $submissionid);
+
     // Find local record and ensure it belongs to current user
     $localrec = $DB->get_record('local_digisign_sub', ['submissionid' => (string)$submissionid], '*', IGNORE_MISSING);
     if (!$localrec) {
@@ -122,32 +134,10 @@ if ($action === 'complete_submission') {
         respond_json(['success' => false, 'error' => 'Permission denied']);
     }
 
-    // Attempt to download signed PDF bytes
+    // Attempt to download signed PDF bytes (for verification that it's available)
     $pdfbytes = local_digisign_download_signed_pdf($submissionid);
 
-    $cfg = local_digisign_get_config();
-
-    $savedfileinfo = null;
-    if ($pdfbytes !== null && $pdfbytes !== false) {
-        if (!empty($cfg->store_local_copy)) {
-            // create filename using template id or submission id and timestamp
-            $filename = 'digisign_' . preg_replace('/[^A-Za-z0-9_.-]/', '_', (string)$submissionid) . '_' . date('Ymd_His') . '.pdf';
-            $filerec = local_digisign_save_signed_file_for_user($USER->id, $filename, $pdfbytes);
-            if ($filerec) {
-                $savedfileinfo = [
-                    'filename' => $filerec->get_filename(),
-                    'filepath' => $filerec->get_filepath(),
-                    'contextid' => $filerec->get_contextid()
-                ];
-            } else {
-                // failed to save file
-                respond_json(['success' => false, 'error' => get_string('failed_store_file', 'local_digisign')]);
-            }
-        } else {
-            // store_local_copy disabled; we still consider it success
-            $savedfileinfo = null;
-        }
-    } else {
+    if ($pdfbytes === null || $pdfbytes === false) {
         // No PDF bytes found yet — this may happen if Docuseal hasn't processed the signed document yet.
         respond_json(['success' => false, 'error' => 'Signed file not available yet']);
     }
@@ -158,8 +148,74 @@ if ($action === 'complete_submission') {
     respond_json([
         'success' => true,
         'message' => 'Submission completed',
-        'savedfile' => $savedfileinfo,
         'marked' => $marked
+    ]);
+}
+
+if ($action === 'fetch_submissions') {
+    $limit = optional_param('limit', 100, PARAM_INT);
+    $status = optional_param('status', '', PARAM_ALPHANUM);
+    $template_id = optional_param('template_id', 0, PARAM_INT);
+    $useremail = $USER->email; // Get current user's email
+    
+    // Build filters array
+    $filters = [];
+    if (!empty($status)) {
+        $filters['status'] = $status;
+    }
+    if (!empty($template_id)) {
+        $filters['template_id'] = $template_id;
+    }
+    
+    // Fetch submissions from DocuSeal API, filtered by user email for operator role
+    $submissions = local_digisign_fetch_submissions($limit, $filters, $useremail);
+    
+    if ($submissions === false) {
+        respond_json(['success' => false, 'error' => 'Failed to fetch submissions']);
+    }
+    
+    respond_json([
+        'success' => true,
+        'submissions' => $submissions,
+        'count' => count($submissions)
+    ]);
+}
+
+if ($action === 'get_submission') {
+    $submissionid = required_param('submission_id', PARAM_RAW);
+    
+    // Find local record and ensure it belongs to current user
+    $localrec = $DB->get_record('local_digisign_sub', ['submissionid' => (string)$submissionid], '*', IGNORE_MISSING);
+    if (!$localrec) {
+        respond_json(['success' => false, 'error' => 'Submission not found']);
+    }
+    if ((int)$localrec->userid !== $USER->id) {
+        respond_json(['success' => false, 'error' => 'Permission denied']);
+    }
+    
+    // Get submission details from DocuSeal API
+    $submission = local_digisign_get_submission($submissionid);
+    
+    if (!$submission) {
+        respond_json(['success' => false, 'error' => 'Failed to fetch submission details']);
+    }
+    
+    // Extract submitter slug for embed URL
+    $submitterslug = null;
+    if (!empty($submission['submitters']) && is_array($submission['submitters'])) {
+        $s0 = reset($submission['submitters']);
+        if (!empty($s0['slug'])) {
+            $submitterslug = (string)$s0['slug'];
+        } else if (!empty($s0['submitter_slug'])) {
+            $submitterslug = (string)$s0['submitter_slug'];
+        }
+    }
+    
+    respond_json([
+        'success' => true,
+        'submission_id' => $submissionid,
+        'submitter_slug' => $submitterslug,
+        'submission_data' => $submission
     ]);
 }
 
