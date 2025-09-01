@@ -38,6 +38,9 @@ if (empty($templates)) {
     exit;
 }
 
+// Add container for JavaScript
+echo '<div id="local-digisign-root" data-useremail="' . s($USER->email) . '">';
+
 // Add CSS for status indicators
 echo '<style>
 .digisign-tile {
@@ -215,7 +218,7 @@ foreach ($templates as $t) {
     }
 
     // Tile markup with status indicator
-    echo '<div class="digisign-tile" data-templateid="'. $tid .'" data-templateslug="'. $slug .'">';
+    echo '<div class="digisign-tile" data-templateid="'. $tid .'" data-template-slug="'. $slug .'">';
     
     // Status indicator icon
     echo '<div class="status-indicator status-' . $status . '">';
@@ -292,5 +295,9 @@ foreach ($templates as $t) {
 }
 
 echo '</div>'; // tiles
+echo '</div>'; // local-digisign-root
+
+// Load the JavaScript module
+$PAGE->requires->js_call_amd('local_digisign/digisign', 'init');
 
 echo $OUTPUT->footer();

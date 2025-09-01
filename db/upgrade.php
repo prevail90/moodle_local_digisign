@@ -112,6 +112,80 @@ function xmldb_local_digisign_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2025083106, 'local', 'digisign');
     }
 
+    // Upgrade from version 2025083106 to 2025083107
+    if ($oldversion < 2025083107) {
+        // This version includes UI fixes and debugging improvements
+        // No database changes needed, just cache clearing
+        
+        upgrade_plugin_savepoint(true, 2025083107, 'local', 'digisign');
+    }
+
+    // Upgrade from version 2025083107 to 2025083108
+    if ($oldversion < 2025083108) {
+        // This version includes new signing page with direct DocuSeal integration
+        // No database changes needed, just cache clearing
+        
+        upgrade_plugin_savepoint(true, 2025083108, 'local', 'digisign');
+    }
+
+    // Upgrade from version 2025083108 to 2025083109
+    if ($oldversion < 2025083109) {
+        // This version includes final fixes and improvements
+        // Add navigation menu item to custommenuitems
+        local_digisign_ensure_navigation_menu();
+        
+        upgrade_plugin_savepoint(true, 2025083109, 'local', 'digisign');
+    }
+
+    // Upgrade from version 2025083109 to 2025083110
+    if ($oldversion < 2025083110) {
+        // This version includes navigation menu fixes
+        // Add navigation menu item to custommenuitems
+        local_digisign_ensure_navigation_menu();
+        
+        upgrade_plugin_savepoint(true, 2025083110, 'local', 'digisign');
+    }
+
+    // Upgrade from version 2025083110 to 2025083111
+    if ($oldversion < 2025083111) {
+        // This version includes simplified sign.php implementation
+        // No database changes needed, just cache clearing
+        
+        upgrade_plugin_savepoint(true, 2025083111, 'local', 'digisign');
+    }
+
+    // Upgrade from version 2025083111 to 2025083112
+    if ($oldversion < 2025083112) {
+        // This version includes API-based submission creation with redirect
+        // No database changes needed, just cache clearing
+        
+        upgrade_plugin_savepoint(true, 2025083112, 'local', 'digisign');
+    }
+
+    // Upgrade from version 2025083112 to 2025083113
+    if ($oldversion < 2025083113) {
+        // This version includes AJAX-based submission creation without sign.php
+        // No database changes needed, just cache clearing
+        
+        upgrade_plugin_savepoint(true, 2025083113, 'local', 'digisign');
+    }
+
+    // Upgrade from version 2025083113 to 2025083114
+    if ($oldversion < 2025083114) {
+        // This version fixes URL pattern to use /d/{template_slug} for new submissions
+        // No database changes needed, just cache clearing
+        
+        upgrade_plugin_savepoint(true, 2025083114, 'local', 'digisign');
+    }
+
+    // Upgrade from version 2025083114 to 2025083115
+    if ($oldversion < 2025083115) {
+        // This version adds JavaScript module loading and fixes AMD module issues
+        // No database changes needed, just cache clearing
+        
+        upgrade_plugin_savepoint(true, 2025083115, 'local', 'digisign');
+    }
+
     // Always clear caches after any upgrade
     try {
         // Clear plugin manager caches

@@ -64,3 +64,10 @@ $string['submission_completion_failed'] = 'Failed to complete submission. Please
 $string['form_error'] = 'An error occurred while loading the form. Please try again.';
 $string['invalid_template'] = 'Invalid template selected.';
 $string['invalid_submission'] = 'Invalid submission selected.';
+$string['submission_completed_message'] = 'Your form has been successfully completed and signed. You can view all your submissions in the submissions page.';
+$string['view_submissions'] = 'View Submissions';
+
+// Navigation settings
+$string['navigation_menu'] = 'Navigation Menu';
+$string['add_to_navigation'] = 'Add to Main Navigation';
+$string['add_to_navigation_desc'] = 'Add "Forms" menu item to the main navigation menu';

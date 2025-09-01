@@ -219,5 +219,60 @@ if ($action === 'get_submission') {
     ]);
 }
 
+if ($action === 'create_submission_ajax') {
+    $template_id = required_param('template_id', PARAM_INT);
+    $template_slug = required_param('template_slug', PARAM_TEXT);
+    $useremail = $USER->email;
+    $username = fullname($USER);
+
+    // Log the submission creation attempt
+    local_digisign_log('create_submission_ajax - user: ' . $username . ' (' . $useremail . '), template: ' . $template_id . ', slug: ' . $template_slug);
+
+    // Create submission via API
+    $resp = local_digisign_create_submission($template_id, $useremail, $username);
+
+    if (!$resp || !is_array($resp)) {
+        respond_json(['success' => false, 'error' => get_string('failed_create_submission', 'local_digisign')]);
+    }
+
+    // For new submissions, we use the template slug, not the submitter slug
+    // The /d/{template_slug} is for the template form
+    // The /s/{submitter_slug} is for individual signer URLs (existing submissions)
+    
+    // Store the submitter slug for later use (existing submissions)
+    $submitterslug = null;
+    if (!empty($resp['submitters']) && is_array($resp['submitters'])) {
+        foreach ($resp['submitters'] as $submitter) {
+            if (isset($submitter['email']) && $submitter['email'] === $useremail && 
+                isset($submitter['role']) && strtolower($submitter['role']) === 'operator') {
+                if (!empty($submitter['slug'])) {
+                    $submitterslug = $submitter['slug'];
+                }
+                break;
+            }
+        }
+    }
+
+    // Store the submission record locally
+    try {
+        $submission_id = $resp['id'] ?? '';
+        local_digisign_record_submission($USER->id, $template_id, $template_slug, $submission_id, $submitterslug, 'created');
+    } catch (Exception $e) {
+        local_digisign_log('failed to record submission: ' . $e->getMessage());
+    }
+
+    // Get DocuSeal base URL
+    $cfg = local_digisign_get_config();
+    $docuseal_base = rtrim(str_replace('/api', '', $cfg->api_url), '/');
+
+    respond_json([
+        'success' => true,
+        'template_slug' => $template_slug,
+        'submitter_slug' => $submitterslug,
+        'docuseal_base' => $docuseal_base,
+        'submission_id' => $submission_id
+    ]);
+}
+
 // Unknown action
 respond_json(['success' => false, 'error' => 'Invalid action']);

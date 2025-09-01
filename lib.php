@@ -779,6 +779,33 @@ function local_digisign_set_secondarynav() {
 }
 
 /**
+ * Ensure the Forms menu item is added to custommenuitems.
+ * This function should be called during plugin installation/upgrade.
+ */
+function local_digisign_ensure_navigation_menu() {
+    global $CFG;
+    
+    $currentmenuitems = isset($CFG->custommenuitems) ? $CFG->custommenuitems : '';
+    
+    // Check if our menu item already exists
+    if (strpos($currentmenuitems, '/local/digisign/') === false) {
+        // Add our menu item
+        $newmenuitem = "Forms|/local/digisign/|Sign forms here";
+        
+        if (empty($currentmenuitems)) {
+            $CFG->custommenuitems = $newmenuitem;
+        } else {
+            $CFG->custommenuitems = $currentmenuitems . "\n" . $newmenuitem;
+        }
+        
+        // Save the configuration
+        set_config('custommenuitems', $CFG->custommenuitems);
+        
+        debugging('local_digisign: Added menu item to custommenuitems', DEBUG_DEVELOPER);
+    }
+}
+
+/**
  * Extends the global navigation with OTA Digisign menu item.
  *
  * @param global_navigation $nav
@@ -786,8 +813,10 @@ function local_digisign_set_secondarynav() {
 function local_digisign_extends_navigation(global_navigation $nav) {
     global $CFG, $PAGE;
 
-    // Remove any existing digisign menu items to prevent duplicates
-    $CFG->custommenuitems = preg_replace('/.*\/local\/digisign.*/', '', $CFG->custommenuitems);
+    // Check if navigation is enabled in settings
+    if (!get_config('local_digisign', 'add_to_navigation')) {
+        return;
+    }
 
     // Check if user is logged in and has access
     if (!isloggedin()) {
@@ -801,25 +830,23 @@ function local_digisign_extends_navigation(global_navigation $nav) {
     }
 
     try {
+        // Check if we're already on a digisign page to avoid duplicates
+        if (strpos($PAGE->url->get_path(), '/local/digisign/') !== false) {
+            return;
+        }
+
         // Add the Forms menu item to the navigation
         $name = "Forms";
-        $url = "{$CFG->wwwroot}/local/digisign/";
+        $url = new moodle_url('/local/digisign/');
         
-        // Add to custommenuitems for main navigation
-        $CFG->custommenuitems .= "\n{$name}|{$url}|Sign forms here";
+        // Add to the navigation tree
+        $nav->add($name, $url, navigation_node::TYPE_CUSTOM, null, 'digisign_menu', new pix_icon('i/form', ''));
         
-        // Also add to the navigation tree
-        $nav->add($name, new moodle_url($url), navigation_node::TYPE_CUSTOM, null, 'digisign_menu');
-        
-        // Clear navigation cache to ensure menu appears immediately
-        try {
-            navigation_cache::destroy_volatile_caches();
-        } catch (Exception $e) {
-            // Silently fail if cache clearing fails
-        }
+        // Log for debugging
+        debugging('local_digisign: Added navigation menu item', DEBUG_DEVELOPER);
         
     } catch (Exception $e) {
-        // Silently fail if navigation can't be extended
+        // Log error but don't fail
         debugging('local_digisign: Failed to extend navigation: ' . $e->getMessage(), DEBUG_DEVELOPER);
     }
 }
